@@ -80,7 +80,8 @@ public class AssetProofSystem
         BigInteger keyKnownRandomness = ProofUtils.randomNumber();
         ECPoint pubKey = blockchainEntry.getPubKey();
         Optional<BigInteger> privateKey = privateKeyDatabase.retrievePrivateKey(pubKey);
-        AddressProofData addressProofData = new AddressProofData(privateKey, pubKey, blockchainEntry.getBalance(), balanceRandomness, keyKnownRandomness, ECConstants.G, ECConstants.H);
+        AddressProofData addressProofData = new AddressProofData(privateKey, pubKey, blockchainEntry.getBalance(),
+                balanceRandomness, keyKnownRandomness, ECConstants.G, ECConstants.H);
         AddressProof addressProof = this.addressProofSystem.createProof(addressProofData);
 
         proof.addAddressProof(pubKey, addressProof);

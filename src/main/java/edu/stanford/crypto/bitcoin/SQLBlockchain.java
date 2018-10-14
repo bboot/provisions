@@ -64,7 +64,8 @@ SQLDatabase {
     @Override
     public Iterator<BlockchainEntry> getBlockchainEntries() {
         try {
-            final ResultSet resultSet = this.connection.createStatement().executeQuery("SELECT public_key,balance FROM blockchain");
+            final ResultSet resultSet = this.connection.createStatement().executeQuery(
+                    "SELECT public_key,balance FROM blockchain");
             return new Iterator<BlockchainEntry>(){
 
                 @Override

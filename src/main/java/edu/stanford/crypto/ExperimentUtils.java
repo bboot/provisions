@@ -103,5 +103,50 @@ public class ExperimentUtils {
             e.printStackTrace();
         }
     }
+
+    public static void storePublicKeys(int numAddresses) throws SQLException {
+        SQLBlockchain blockchain = new SQLBlockchain();
+        try {
+            blockchain.truncate();
+        } finally {
+            blockchain.close();
+        }
+        Random rng = new Random();
+        int availableProcessors = Runtime.getRuntime().availableProcessors();
+        Semaphore semaphore = new Semaphore(0);
+        int process = 0;
+        while (process < availableProcessors) {
+            SQLBlockchain processBlockchain = new SQLBlockchain();
+            SQLPrivateKeyDatabase privateKeyDatabase = new SQLPrivateKeyDatabase();
+            int processId = process++;
+            ForkJoinTask.adapt(() -> {
+                        try {
+                            for (int i = processId; i < numAddresses; i += availableProcessors) {
+                                BigInteger privateKey = new BigInteger(256, rng);
+                                ECPoint publicKey = ECConstants.G.multiply(privateKey);
+                                BigInteger balance = new BigInteger(10, rng);
+                                processBlockchain.addEntry(publicKey, balance);
+                                if (rng.nextDouble() >= 0.05) continue;
+                                privateKeyDatabase.store(publicKey, privateKey);
+                            }
+                        } finally {
+                            try {
+                                privateKeyDatabase.close();
+                                processBlockchain.close();
+                            } catch (SQLException e) {
+                                e.printStackTrace();
+                            }
+
+                            semaphore.release();
+                        }
+                    }
+            ).fork();
+        }
+        try {
+            semaphore.acquire(availableProcessors);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
 }
 
