@@ -58,7 +58,9 @@ public class AddressProofSystem implements ProofSystem<AddressProof, AddressProo
         BigInteger responseOne = uOne.add(falseV.multiply(BigInteger.ONE.subtract(s))).add(trueV.multiply(s)).mod(ECConstants.Q);
 
 
-        return new AddressProof(p, l, privateKey.isPresent() ? falseChallenge : trueChallenge, privateKey.isPresent() ? trueChallenge : falseChallenge, responseS, responseV, responseT, responseX, responseZero, responseOne);
+        return new AddressProof(p, l, privateKey.isPresent() ? falseChallenge : trueChallenge,
+                privateKey.isPresent() ? trueChallenge : falseChallenge,
+                responseS, responseV, responseT, responseX, responseZero, responseOne);
     }
 
 }

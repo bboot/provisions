@@ -25,7 +25,9 @@ public class AddressProof
     private final BigInteger responseZero;
     private final BigInteger responseOne;
 
-    public AddressProof(ECPoint commitmentBalance, ECPoint commitmentXHat,  BigInteger challengeZero, BigInteger challengeOne, BigInteger responseS, BigInteger responseV, BigInteger responseT, BigInteger responseXHat, BigInteger responseZero, BigInteger responseOne) {
+    public AddressProof(ECPoint commitmentBalance, ECPoint commitmentXHat,  BigInteger challengeZero,
+                        BigInteger challengeOne, BigInteger responseS, BigInteger responseV, BigInteger responseT,
+                        BigInteger responseXHat, BigInteger responseZero, BigInteger responseOne) {
         this.commitmentBalance = commitmentBalance;
         this.commitmentXHat = commitmentXHat;
         this.challengeZero = challengeZero;
@@ -85,7 +87,9 @@ public class AddressProof
         byte[] responseZeroEncoded = this.responseZero.toByteArray();
         byte[] responseOneEncoded = this.responseOne.toByteArray();
 
-        List<byte[]> arrList = Arrays.asList(commitmentBalanceEncoded, commitmentXHatEncoded, challengeZeroEncoded, challengeOneEncoded,responseSEncoded, responseTEncoded, responseVEncoded, responseXHatEncoded, responseZeroEncoded, responseOneEncoded);
+        List<byte[]> arrList = Arrays.asList(commitmentBalanceEncoded, commitmentXHatEncoded, challengeZeroEncoded,
+                challengeOneEncoded,responseSEncoded, responseTEncoded, responseVEncoded, responseXHatEncoded,
+                responseZeroEncoded, responseOneEncoded);
         int totalLength = arrList.stream().mapToInt(arr -> arr.length).map(i -> i + 1).sum();
         byte[] fullArray = new byte[totalLength];
         int currIndex = 0;
