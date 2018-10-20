@@ -13,6 +13,7 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.math.BigInteger;
+import java.security.spec.ECParameterSpec;
 import java.sql.SQLException;
 import java.util.Iterator;
 import java.util.Optional;
@@ -27,6 +28,8 @@ import org.json.simple.parser.ParseException;
 
 import javax.swing.text.html.Option;
 import java.util.Iterator;
+
+import static edu.stanford.crypto.ECConstants.BITCOIN_CURVE;
 
 public class ExperimentUtils {
     public static void generateRandomCustomers(int numCustomers, int maxBits) throws SQLException {
@@ -140,27 +143,33 @@ public class ExperimentUtils {
         String jsonData = readFile(filename);
         JSONObject jsonObject = new JSONObject(jsonData);
         Iterator<String> keys = jsonObject.keys();
+        Long uncompressed = new Long(0);
         Long bad = new Long(0);
         Long mine = new Long(0);
         while(keys.hasNext()) {
             String key = keys.next();
             if (!key.startsWith("03") && !key.startsWith("02") ||
-                    key.length() != 66) {
-                // Not sure what this is?
-                bad++;
-                continue;
+                    key.length() != 64 + 2) {
+                String prefix = key.substring(0, 2);
+                if (!prefix.equals("04") || key.length() != 64 + 64 + 2) {
+                    bad++;
+                    continue;
+                }
+                BigInteger x = new BigInteger(key.substring(2, 2 + 64), 16);
+                BigInteger y = new BigInteger(key.substring(2 + 64), 16);
+//                ECPoint pubkey = new ECPoint(BITCOIN_CURVE, x, y);
+//                ECParameterSpec ecSpec = new ECParameterSpec(BITCOIN_CURVE, x, y);
+                uncompressed++;
             }
             JSONObject pubkey = jsonObject.getJSONObject(key);
 //            System.out.println(pubkey.toString());
             if (!pubkey.isNull("priv_key")) {
+                System.out.println("priv_key: "+pubkey.get("priv_key"));
                 mine++;
             }
-            // is this a compressed key?  Does it have trailing or
-            // leading bytes?  Does it need to be byte-swapped?
-            // How to test if it is a valid public key
         }
-        System.out.println(String.format("Received %s keys, %d bad, %d mine",
-                jsonObject.length(), bad, mine));
+        System.out.println(String.format("Received %s keys, %d bad, %d uncompressed, %d mine",
+                jsonObject.length(), bad, uncompressed, mine));
         // TODO: Load 'em up!
     }
 
