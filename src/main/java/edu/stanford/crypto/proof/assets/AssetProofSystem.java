@@ -54,6 +54,7 @@ public class AssetProofSystem
                 BlockchainEntry blockchainEntry;
                 while (blockchainEntries.hasNext()) {
                     blockchainEntry = blockchainEntries.next();
+                    System.out.println(blockchainEntry);
                     if (this.blockchainEntriesQueue.offer(blockchainEntry)) continue;
                     this.createAddressProof(blockchainEntry, proof, privateKeyDatabase);
                 }
@@ -83,7 +84,6 @@ public class AssetProofSystem
         AddressProofData addressProofData = new AddressProofData(privateKey, pubKey, blockchainEntry.getBalance(),
                 balanceRandomness, keyKnownRandomness, ECConstants.G, ECConstants.H);
         AddressProof addressProof = this.addressProofSystem.createProof(addressProofData);
-
         proof.addAddressProof(pubKey, addressProof);
     }
 

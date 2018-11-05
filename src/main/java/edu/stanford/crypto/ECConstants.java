@@ -41,6 +41,7 @@ public final class ECConstants {
     public static final int STANDARD_SECURITY = 256;
     public static final int CHALLENGE_LENGTH = 256;
     public static final ECPoint G = CustomNamedCurves.getByName("secp256k1").getG();
+    public static final BigInteger N = CustomNamedCurves.getByName("secp256k1").getN();
     public static final ECPoint H;
     public static final BigInteger Q = BITCOIN_CURVE.getOrder();
     public static final BigInteger CHALLENGE_Q = Q.min(BigInteger.ONE.shiftLeft(256));

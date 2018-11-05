@@ -9,12 +9,26 @@ import edu.stanford.crypto.database.Database;
 import edu.stanford.crypto.proof.Proof;
 import edu.stanford.crypto.proof.binary.BinaryProof;
 import org.bouncycastle.math.ec.ECPoint;
+import org.json.JSONArray;
+import org.json.JSONObject;
+import org.json.JSONString;
 
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Paths;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Iterator;
+import java.util.List;
+
+import static edu.stanford.crypto.ECConstants.BITCOIN_CURVE;
+import static java.nio.file.Files.readAllLines;
 
 public class AssetProof
 implements Proof,
@@ -22,6 +36,8 @@ SQLDatabase {
     public static final String ADD_ADDRESS = "INSERT INTO asset_proof VALUES  (?, ?) ";
     public static final String GET_PROOF_SQL = "SELECT asset_proof.main_proof FROM asset_proof WHERE public_key= ?";
     public static final String LIST_PROOFS_SQL = "SELECT asset_proof.public_key,asset_proof.main_proof FROM asset_proof ";
+    public static final String LIST_PROOFS_SQL_TO_JSON = "SELECT json_agg(json_build_object(" +
+            "'public_key', asset_proof.public_key,'main_proof', asset_proof.main_proof)) FROM asset_proof ";
     public static final String READ_SIZE = "SELECT pg_size_pretty(pg_total_relation_size('public.asset_proof'))";
     private final PreparedStatement updateStatement;
     private final PreparedStatement readStatement;
@@ -30,6 +46,12 @@ SQLDatabase {
     public AssetProof() throws SQLException {
         this.updateStatement = this.connection.prepareStatement(ADD_ADDRESS);
         this.readStatement = this.connection.prepareStatement(GET_PROOF_SQL);
+    }
+
+    public AssetProof(String filename) throws SQLException, IOException {
+        this.updateStatement = this.connection.prepareStatement(ADD_ADDRESS);
+        this.readStatement = this.connection.prepareStatement(GET_PROOF_SQL);
+        this.importProofs(filename);
     }
 
     @Override
@@ -63,6 +85,72 @@ SQLDatabase {
         throw new IllegalArgumentException("No such id " + publicKey.normalize());
     }
 
+    public static byte[] hexStringToByteArray(String s) {
+        int len = s.length();
+        byte[] data = new byte[len / 2];
+        for (int i = 0; i < len; i += 2) {
+            data[i / 2] = (byte) ((Character.digit(s.charAt(i), 16) << 4)
+                    + Character.digit(s.charAt(i+1), 16));
+        }
+        return data;
+    }
+
+    public void importProofs(String filename) throws IOException {
+        List<String> lines = readAllLines(Paths.get(filename), StandardCharsets.UTF_8);
+        String contents = lines.get(0);
+
+        JSONArray jsonArray = new JSONArray(contents.trim());
+        for (int i = 0; i < jsonArray.length(); i++) {
+            JSONObject jsonObject = jsonArray.getJSONObject(i);
+            Iterator<String> keys = jsonObject.keys();
+            byte[] keyBytes = new byte[0];
+            byte[] proofBytes = new byte[0];
+            while(keys.hasNext()) {
+                String key = keys.next();
+                String value = (String)jsonObject.get(key);
+                try {
+                    System.out.println(key);
+                    System.out.println(value);
+                    if (key.equals("public_key")) {
+                        keyBytes = this.hexStringToByteArray(value.substring(2));
+                        this.updateStatement.setBytes(1, keyBytes);
+                    }
+                    if (key.equals("main_proof")) {
+                        proofBytes = this.hexStringToByteArray(value.substring(2));
+                        this.updateStatement.setBytes(2, proofBytes);
+                    }
+                    if (keyBytes.length > 0 && proofBytes.length > 0) {
+                        this.updateStatement.executeUpdate();
+                    }
+                } catch (Exception e) {
+                    System.out.println(key);
+                    System.out.println(value);
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+
+    public void exportProofs(String filename) throws FileNotFoundException {
+        try {
+            this.connection.setAutoCommit(false);
+            final ResultSet resultSet = this.connection.createStatement(
+                                             ).executeQuery(LIST_PROOFS_SQL_TO_JSON);
+            resultSet.setFetchSize(1000);
+            boolean next = resultSet.next();
+            if (next) {
+                String  proof_json = resultSet.getString(1);
+                //System.out.println(proof_json);
+                try (PrintWriter out = new PrintWriter(filename)) {
+                    out.println(proof_json);
+                }
+            }
+        } catch (SQLException e) {
+                e.printStackTrace();
+                throw new IllegalStateException(e);
+            }
+    }
+
     public Iterator<AddressProofEntry> getAddressProofs() {
         try {
             this.connection.setAutoCommit(false);
@@ -90,7 +178,7 @@ SQLDatabase {
                     try {
                         byte[] publicKeyBytes = resultSet.getBytes(1);
                         byte[] proofBytes = resultSet.getBytes(2);
-                        ECPoint publicKey = ECConstants.BITCOIN_CURVE.decodePoint(publicKeyBytes);
+                        ECPoint publicKey = BITCOIN_CURVE.decodePoint(publicKeyBytes);
                         AddressProof addressProof = new AddressProof(proofBytes);
                         return new AddressProofEntry(publicKey, addressProof);
                     }
