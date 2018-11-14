@@ -31,7 +31,8 @@ public class AssetsVerifier
     public void verify(AssetProof proof, GeneratorData<AssetProof> data) {
         Iterator<AddressProofEntry> addressProofs = proof.getAddressProofs();
         BlockingExecutor pool = new BlockingExecutor();
-        int nThreads = Runtime.getRuntime().availableProcessors() - 1;
+//        int nThreads = Runtime.getRuntime().availableProcessors() - 1;
+        int nThreads = 0;
         Stream.generate(AssetsVerificationWorker::new).limit(nThreads).forEach(pool::submit);
 
         try (SQLBlockchain blockchain = new SQLBlockchain()) {
@@ -48,7 +49,6 @@ public class AssetsVerifier
             pool.awaitTermination(1, TimeUnit.MINUTES);
             System.out.println("Total Encryption " + this.totalEncryption.get().normalize());
 
-
         } catch (SQLException e) {
             e.printStackTrace();
             throw new AssertionError(e);
@@ -61,7 +61,8 @@ public class AssetsVerifier
     private void verifyAddressProof(SQLBlockchain blockchain, AddressProofEntry addressProofEntry) {
         ECPoint publicKey = addressProofEntry.getPublicKey();
         BigInteger balance = blockchain.getBalance(publicKey);
-        AddressVerificationData addressVerificationData = new AddressVerificationData(publicKey, balance, ECConstants.G, ECConstants.H);
+        AddressVerificationData addressVerificationData = new AddressVerificationData(
+                publicKey, balance, ECConstants.G, ECConstants.H);
         AddressProof addressProof = addressProofEntry.getAddressProof();
         this.addressVerifier.verify(addressProof, addressVerificationData);
         this.totalEncryption.accumulateAndGet(addressProof.getCommitmentBalance(), ECPoint::add);

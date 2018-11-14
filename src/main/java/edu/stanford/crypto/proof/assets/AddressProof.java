@@ -113,11 +113,11 @@ public class AddressProof
         return this.responseS;
     }
 
-    public ECPoint getCommitmentBalance() {
+    public ECPoint getCommitmentBalance() { // p?
         return this.commitmentBalance;
     }
 
-    public ECPoint getCommitmentXHat() {
+    public ECPoint getCommitmentXHat() { // l?
         return this.commitmentXHat;
     }
 

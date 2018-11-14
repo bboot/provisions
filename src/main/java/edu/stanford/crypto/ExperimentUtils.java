@@ -169,6 +169,7 @@ public class ExperimentUtils {
         Long uncompressed = new Long(0);
         Long bad = new Long(0);
         Long mine = new Long(0);
+        BigInteger my_balance = BigInteger.valueOf(0);
         SQLBlockchain processBlockchain = new SQLBlockchain();
         SQLPrivateKeyDatabase privateKeyDatabase = new SQLPrivateKeyDatabase();
         while(entries.hasNext()) {
@@ -234,6 +235,8 @@ public class ExperimentUtils {
                 BigInteger privateKey = new BigInteger(priv_key, 16);
                 privateKeyDatabase.store(publicKey, privateKey);
                 mine++;
+                my_balance = balance_satoshis.add(my_balance);
+                System.out.println("total balance:" + my_balance);
             }
         }
         try {

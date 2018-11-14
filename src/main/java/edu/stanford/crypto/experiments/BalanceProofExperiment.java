@@ -105,7 +105,10 @@ public class BalanceProofExperiment {
                         }
                     }
                     long endVerifyParticipation = System.currentTimeMillis();
-                    stream.write(("" + bits + ";" + customers + ";" + (endProof - startProof) + ";" + (endVerifyFull - endProof) + ";" + (endVerifyParticipation - endVerifyFull) + ";" + proof.getSizeInfo() + "\n").getBytes());
+                    stream.write(("" + bits + ";" + customers + ";" + (endProof - startProof)
+                                  + ";" + (endVerifyFull - endProof) + ";"
+                                  + (endVerifyParticipation - endVerifyFull)
+                                  + ";" + proof.getSizeInfo() + "\n").getBytes());
                     stream.flush();
                     proof.close();
                     System.out.println("Connections closed");

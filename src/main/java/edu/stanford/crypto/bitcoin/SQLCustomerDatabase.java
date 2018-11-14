@@ -22,15 +22,24 @@ SQLDatabase {
     public static final String INSERT_CUSTOMER_SQL = "INSERT INTO customer_balance VALUES (?,?)";
     public static final String TRUNCATE_TABLE_SQL = "TRUNCATE TABLE customer_balance,balance_proof_secrets";
     private final PreparedStatement queryBalance;
+    private final PreparedStatement queryBalanceRandomness;
     private final PreparedStatement listCustomers;
     private final PreparedStatement insertCustomer;
+    private final PreparedStatement updateCustomerInfo;
+    private final PreparedStatement insertCustomerInfo;
     private final PreparedStatement truncateDB;
     private final Connection connection = Database.getConnection();
 
     public SQLCustomerDatabase() throws SQLException {
         this.queryBalance = this.connection.prepareStatement("SELECT balance FROM customer_balance WHERE customer_id=?");
+        this.queryBalanceRandomness = this.connection.prepareStatement("SELECT balance_randomness " +
+                "FROM customer_balance WHERE customer_id=?");
         this.listCustomers = this.connection.prepareStatement("SELECT customer_id,balance FROM customer_balance");
         this.insertCustomer = this.connection.prepareStatement("INSERT INTO customer_balance VALUES (?,?)");
+        this.insertCustomerInfo = this.connection.prepareStatement("INSERT INTO customer_balance(customer_id," +
+                "balance,balance_randomness) VALUES (?,?,?)");
+        this.updateCustomerInfo = this.connection.prepareStatement("UPDATE ONLY customer_balance " +
+                "SET balance=?,balance_randomness=? WHERE customer_id=?");
         this.truncateDB = this.connection.prepareStatement("TRUNCATE TABLE customer_balance,balance_proof_secrets");
     }
 
@@ -57,6 +66,50 @@ SQLDatabase {
             PreparedStatement statement = this.insertCustomer;
             statement.setString(1, customerId);
             statement.setLong(2, balance.longValueExact());
+            statement.execute();
+        }
+        catch (SQLException e) {
+            e.printStackTrace();
+            throw new IllegalStateException(e);
+        }
+    }
+
+    public byte[] getBalanceRandomness(String customerId) {
+        byte[] balanceRandomness = new byte[0];
+        try {
+            this.queryBalanceRandomness.setString(1, customerId);
+            ResultSet resultSet = this.queryBalanceRandomness.executeQuery();
+            if (resultSet.next()) {
+                balanceRandomness = resultSet.getBytes(1);
+            }
+        }
+        catch (SQLException e) {
+            e.printStackTrace();
+            throw new AssertionError(e);
+        }
+        return balanceRandomness;
+    }
+
+    public void addBalanceInfo(String customerId, BigInteger balance, byte[] balance_randomness) {
+        try {
+            PreparedStatement statement = this.insertCustomerInfo;
+            statement.setString(1, customerId);
+            statement.setLong(2, balance.longValueExact());
+            statement.setBytes(3, balance_randomness);
+            statement.execute();
+        }
+        catch (SQLException e) {
+            e.printStackTrace();
+            throw new IllegalStateException(e);
+        }
+    }
+
+    public void updateBalanceInfo(String customerId, BigInteger balance, byte[] balance_randomness) {
+        try {
+            PreparedStatement statement = this.updateCustomerInfo;
+            statement.setString(3, customerId);
+            statement.setLong(1, balance.longValueExact());
+            statement.setBytes(2, balance_randomness);
             statement.execute();
         }
         catch (SQLException e) {

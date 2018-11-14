@@ -54,7 +54,6 @@ public class AssetProofSystem
                 BlockchainEntry blockchainEntry;
                 while (blockchainEntries.hasNext()) {
                     blockchainEntry = blockchainEntries.next();
-                    System.out.println(blockchainEntry);
                     if (this.blockchainEntriesQueue.offer(blockchainEntry)) continue;
                     this.createAddressProof(blockchainEntry, proof, privateKeyDatabase);
                 }
@@ -81,10 +80,14 @@ public class AssetProofSystem
         BigInteger keyKnownRandomness = ProofUtils.randomNumber();
         ECPoint pubKey = blockchainEntry.getPubKey();
         Optional<BigInteger> privateKey = privateKeyDatabase.retrievePrivateKey(pubKey);
+        if (privateKey.isPresent()) {
+            System.out.println("Have private key for "+pubKey.toString());
+        }
         AddressProofData addressProofData = new AddressProofData(privateKey, pubKey, blockchainEntry.getBalance(),
                 balanceRandomness, keyKnownRandomness, ECConstants.G, ECConstants.H);
         AddressProof addressProof = this.addressProofSystem.createProof(addressProofData);
-        proof.addAddressProof(pubKey, addressProof);
+//        proof.addAddressProof(pubKey, addressProof);
+        proof.addAddressProof(pubKey, addressProof, addressProofData);
     }
 
     private class AddressProofWorkerThread

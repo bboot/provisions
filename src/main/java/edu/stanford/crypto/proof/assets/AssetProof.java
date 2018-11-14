@@ -5,6 +5,7 @@ package edu.stanford.crypto.proof.assets;
 
 import edu.stanford.crypto.ECConstants;
 import edu.stanford.crypto.SQLDatabase;
+import edu.stanford.crypto.bitcoin.SQLCustomerDatabase;
 import edu.stanford.crypto.database.Database;
 import edu.stanford.crypto.proof.Proof;
 import edu.stanford.crypto.proof.binary.BinaryProof;
@@ -27,7 +28,7 @@ import java.sql.SQLException;
 import java.util.Iterator;
 import java.util.List;
 
-import static edu.stanford.crypto.ECConstants.BITCOIN_CURVE;
+import static edu.stanford.crypto.ECConstants.*;
 import static java.nio.file.Files.readAllLines;
 
 public class AssetProof
@@ -49,14 +50,80 @@ SQLDatabase {
     }
 
     public AssetProof(String filename) throws SQLException, IOException {
-        this.updateStatement = this.connection.prepareStatement(ADD_ADDRESS);
-        this.readStatement = this.connection.prepareStatement(GET_PROOF_SQL);
+        this();
         this.importProofs(filename);
     }
 
     @Override
     public void close() throws SQLException {
         this.connection.close();
+    }
+
+    public void addAddressProof(ECPoint publicKey, AddressProof proof, AddressProofData addressProofData) {
+        addAddressProof(publicKey, proof);
+        if (!addressProofData.getPrivateKey().isPresent()) {
+            return;
+        }
+        // XXX We are overloading the customer table for this
+        BigInteger this_balance = addressProofData.getBalance();
+        BigInteger this_balance_randomness = addressProofData.getBalanceRandomness();
+        try {
+            SQLCustomerDatabase customers = new SQLCustomerDatabase();
+            BigInteger balance = customers.getBalance("Bob");
+            byte[] curHsumV = customers.getBalanceRandomness("Bob");
+            ECPoint cur_balanceRandomness = ECConstants.BITCOIN_CURVE.decodePoint(curHsumV);
+            System.out.println("adding "+cur_balanceRandomness.toString());
+            ECPoint balanceRandomness = cur_balanceRandomness.add(ECConstants.H.multiply(this_balance_randomness));
+            customers.updateBalanceInfo("Bob", balance.add(this_balance), balanceRandomness.getEncoded(true));
+        } catch (AssertionError e) {
+            try {
+                SQLCustomerDatabase customers = new SQLCustomerDatabase();
+                ECPoint balanceRandomness = ECConstants.H.multiply(this_balance_randomness);
+                customers.addBalanceInfo("Bob", this_balance, balanceRandomness.getEncoded(true));
+            } catch(Exception e2) {
+                System.out.println("some error "+e2);
+            }
+        } catch (Exception e) {
+            System.out.println("Some other error "+e);
+        }
+    }
+
+    public BigInteger getTotalAssets() {
+        BigInteger balance = BigInteger.ZERO;
+        try {
+            SQLCustomerDatabase customers = new SQLCustomerDatabase();
+            balance = customers.getBalance("Bob");
+        } catch (Exception e) {
+            // ignore
+        }
+        return balance;
+    }
+
+    public String getBalanceRandomnessString() {
+       byte[] randomness = getBalanceRandomness();
+       ECPoint balanceRandomness = ECConstants.BITCOIN_CURVE.decodePoint(randomness);
+       return balanceRandomness.toString();
+    }
+
+    public byte[] getBalanceRandomness() {
+        byte[] balance_randomness = new byte[0];
+        try {
+            SQLCustomerDatabase customers = new SQLCustomerDatabase();
+            balance_randomness = customers.getBalanceRandomness("Bob");
+        } catch (Exception e) {
+            // ignore
+        }
+        return balance_randomness;
+    }
+
+    public void openedCommitmentInfo() {
+        System.out.println(String.format("Proof size: %s", getSizeInfo()));
+        System.out.println(String.format("Total Satoshi: %s", getTotalAssets().toString()));
+        byte[] randomness = getBalanceRandomness();
+        ECPoint balanceRandomness = ECConstants.BITCOIN_CURVE.decodePoint(randomness);
+        System.out.println(String.format("Balance Randomness: %s", balanceRandomness.toString()));
+        ECPoint Z_Assets = G.multiply(getTotalAssets()).add(balanceRandomness).normalize();
+        System.out.println(String.format("Z_Assets: %s", Z_Assets.toString()));
     }
 
     public void addAddressProof(ECPoint publicKey, AddressProof proof) {

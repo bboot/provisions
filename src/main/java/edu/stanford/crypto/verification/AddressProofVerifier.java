@@ -16,6 +16,7 @@ public class AddressProofVerifier
         ECPoint g = data.getG();
         ECPoint h = data.getH();
         ECPoint b = g.multiply(data.getBalance());
+
         BigInteger transmittedChallenge = proof.getChallengeZero().add(proof.getChallengeOne());
         ECPoint balanceClaim = proof.getCommitmentBalance().multiply(transmittedChallenge);
         ECPoint a1 = h.multiply(proof.getResponseV()).add(b.multiply(proof.getResponseS())).subtract(balanceClaim);
@@ -28,7 +29,8 @@ public class AddressProofVerifier
         ECPoint aZero = h.multiply(proof.getResponseZero()).subtract(zeroClaim);
         ECPoint aOne = h.multiply(proof.getResponseOne()).subtract(oneClaim);
 
-        BigInteger computedChallenge = ProofUtils.computeChallenge(g, h, data.getPublicKey(), b, proof.getCommitmentBalance(), proof.getCommitmentXHat(), a1, a2, a3, aZero, aOne);
+        BigInteger computedChallenge = ProofUtils.computeChallenge(g, h, data.getPublicKey(), b,
+                    proof.getCommitmentBalance(), proof.getCommitmentXHat(), a1, a2, a3, aZero, aOne);
         this.holds(transmittedChallenge, computedChallenge);
     }
 }

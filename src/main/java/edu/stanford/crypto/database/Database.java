@@ -30,13 +30,22 @@ public final class Database {
         return DriverManager.getConnection(URL, USER, PASSWORD);
     }
 
+    public static void clearAccounts() {
+        // customer_balance table sort of being overloaded rn
+        executeStatement("TRUNCATE TABLE customer_balance CASCADE");
+    }
+
     public static void clearProofs() {
+        executeStatement("TRUNCATE TABLE balance_proof,balance_proof_secrets,asset_proof");
+    }
+
+    public static void executeStatement(String command) {
         try {
             Connection connection = Database.getConnection();
             Throwable throwable = null;
             try {
                 Statement statement = connection.createStatement();
-                statement.execute("TRUNCATE TABLE balance_proof,balance_proof_secrets,asset_proof");
+                statement.execute(command);
             }
             catch (Throwable statement) {
                 throwable = statement;
@@ -100,6 +109,7 @@ public final class Database {
                 "(\n" +
                 "  customer_id CHARACTER VARYING(9) NOT NULL,\n" +
                 "  balance BIGINT,\n" +
+                "  balance_randomness BYTEA,\n" +
                 "  CONSTRAINT customer_balance_pkey PRIMARY KEY (customer_id)\n" +
                 ")\n" +
                 "WITH (\n" +
